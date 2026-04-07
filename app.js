@@ -112,6 +112,14 @@ function calcComparison({ sizeCategory, price, cost, includeTransfer, rakumaComm
 // UI制御
 // ==========================================
 
+// 安全なDOM要素生成ヘルパー（innerHTML不使用）
+function createEl(tag, className, textContent) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (textContent !== undefined) el.textContent = textContent;
+  return el;
+}
+
 let currentMode = "profit"; // "profit" | "price" | "compare"
 
 // 数値フォーマット（3桁カンマ区切り）
@@ -148,7 +156,7 @@ function initAppSelect() {
 
 function initCompareSizeSelect() {
   const sel = document.getElementById("compare-size");
-  sel.innerHTML = "";
+  sel.replaceChildren();
   for (const cat of SIZE_CATEGORIES) {
     const opt = document.createElement("option");
     opt.value = cat.key;
@@ -159,7 +167,7 @@ function initCompareSizeSelect() {
 
 function initCompareRakumaCommission() {
   const sel = document.getElementById("compare-rakuma-commission");
-  sel.innerHTML = "";
+  sel.replaceChildren();
   for (const opt of FRIMA_DATA.rakuma.commissionOptions) {
     const el = document.createElement("option");
     el.value = opt.value;
@@ -250,7 +258,9 @@ function switchMode(mode) {
 function onAppSelect() {
   const appKey = document.getElementById("app-select").value;
   if (!appKey) {
-    document.getElementById("shipping-select").innerHTML = '<option value="">先にアプリを選択</option>';
+    const shipSel = document.getElementById("shipping-select");
+    shipSel.replaceChildren();
+    shipSel.appendChild(createEl("option", "", "先にアプリを選択"));
     document.getElementById("commission-group").style.display = "none";
     document.getElementById("transfer-group").style.display = "none";
     document.getElementById("result-single").style.display = "none";
@@ -264,7 +274,7 @@ function onAppSelect() {
   const commissionSelect = document.getElementById("commission-select");
   if (appData.commissionType === "variable") {
     commissionGroup.style.display = "block";
-    commissionSelect.innerHTML = "";
+    commissionSelect.replaceChildren();
     for (const opt of appData.commissionOptions) {
       const el = document.createElement("option");
       el.value = opt.value;
@@ -277,7 +287,7 @@ function onAppSelect() {
 
   // 振込先セレクト
   const transferSelect = document.getElementById("transfer-select");
-  transferSelect.innerHTML = "";
+  transferSelect.replaceChildren();
   for (const opt of appData.transferFeeOptions) {
     const el = document.createElement("option");
     el.value = opt.value;
@@ -290,7 +300,10 @@ function onAppSelect() {
 
   // 配送方法セレクト
   const shippingSelect = document.getElementById("shipping-select");
-  shippingSelect.innerHTML = '<option value="">選択してください</option>';
+  shippingSelect.replaceChildren();
+  const defaultOpt = createEl("option", "", "選択してください");
+  defaultOpt.value = "";
+  shippingSelect.appendChild(defaultOpt);
 
   for (const group of appData.shippingGroups) {
     const optgroup = document.createElement("optgroup");
@@ -432,7 +445,7 @@ function renderSingleResult(result, mode) {
 
   // 内訳テーブル
   const tbody = document.getElementById("breakdown-body");
-  tbody.innerHTML = "";
+  tbody.replaceChildren();
 
   const rows = [
     ["原価（仕入れ値）", formatYen(result.cost)],
@@ -450,7 +463,13 @@ function renderSingleResult(result, mode) {
 
   for (const [label, value] of rows) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${label}</td><td class="text-right">${value}</td>`;
+    const tdLabel = document.createElement("td");
+    tdLabel.textContent = label;
+    const tdValue = document.createElement("td");
+    tdValue.className = "text-right";
+    tdValue.textContent = value;
+    tr.appendChild(tdLabel);
+    tr.appendChild(tdValue);
     tbody.appendChild(tr);
   }
 
@@ -486,7 +505,7 @@ function renderCompareResults(results) {
   const container = document.getElementById("compare-cards");
 
   resultArea.style.display = "block";
-  container.innerHTML = "";
+  container.replaceChildren();
 
   const rankLabels = ["1位", "2位", "3位", "4位", "5位"];
 
@@ -495,12 +514,10 @@ function renderCompareResults(results) {
     card.className = "compare-card";
 
     if (!r.available) {
-      card.innerHTML = `
-        <div class="compare-card-header">
-          <span class="compare-app-name">${r.appName}</span>
-        </div>
-        <p class="compare-no-shipping">このサイズの配送方法なし</p>
-      `;
+      const header = createEl("div", "compare-card-header");
+      header.appendChild(createEl("span", "compare-app-name", r.appName));
+      card.appendChild(header);
+      card.appendChild(createEl("p", "compare-no-shipping", "このサイズの配送方法なし"));
       container.appendChild(card);
       return;
     }
@@ -512,20 +529,20 @@ function renderCompareResults(results) {
       ? `手数料${(r.commissionRate * 100).toFixed(1)}%`
       : `手数料${(r.commissionRate * 100).toFixed(0)}%`;
 
-    card.innerHTML = `
-      <div class="compare-card-header">
-        <span class="compare-app-name">${r.appName}</span>
-        <span class="compare-rank">${rankLabels[i] || ""}</span>
-      </div>
-      <div class="compare-shipping-name">${r.shippingGroupName} — ${r.shippingName}</div>
-      <div class="compare-profit">${formatYen(r.profit)}</div>
-      <div class="compare-details">
-        <span>${commissionLabel}: ${formatYen(r.commission)}</span>
-        <span>送料: ${formatYen(r.shippingCost)}</span>
-        ${r.materialCost > 0 ? `<span>資材: ${formatYen(r.materialCost)}</span>` : ""}
-        ${r.transferFee > 0 ? `<span>振込: ${formatYen(r.transferFee)}</span>` : ""}
-      </div>
-    `;
+    const header = createEl("div", "compare-card-header");
+    header.appendChild(createEl("span", "compare-app-name", r.appName));
+    header.appendChild(createEl("span", "compare-rank", rankLabels[i] || ""));
+    card.appendChild(header);
+
+    card.appendChild(createEl("div", "compare-shipping-name", `${r.shippingGroupName} — ${r.shippingName}`));
+    card.appendChild(createEl("div", "compare-profit", formatYen(r.profit)));
+
+    const details = createEl("div", "compare-details");
+    details.appendChild(createEl("span", "", `${commissionLabel}: ${formatYen(r.commission)}`));
+    details.appendChild(createEl("span", "", `送料: ${formatYen(r.shippingCost)}`));
+    if (r.materialCost > 0) details.appendChild(createEl("span", "", `資材: ${formatYen(r.materialCost)}`));
+    if (r.transferFee > 0) details.appendChild(createEl("span", "", `振込: ${formatYen(r.transferFee)}`));
+    card.appendChild(details);
 
     container.appendChild(card);
   });
