@@ -381,6 +381,47 @@ input[type="number"]:focus {
   font-style: italic;
 }
 
+/* 免責事項 */
+.disclaimer {
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.disclaimer-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.disclaimer ul {
+  list-style: none;
+  padding: 0;
+}
+
+.disclaimer li {
+  font-size: 12px;
+  color: var(--color-text-sub);
+  line-height: 1.7;
+  padding-left: 1em;
+  text-indent: -1em;
+  margin-bottom: 4px;
+}
+
+.disclaimer li::before {
+  content: "・";
+}
+
+.footer-meta {
+  font-size: 11px;
+  color: var(--color-text-sub);
+  opacity: 0.7;
+}
+
 /* フッター */
 .footer {
   margin-top: 32px;
