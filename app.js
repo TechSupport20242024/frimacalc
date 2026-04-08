@@ -70,7 +70,7 @@ function formatPercent(n) { return n.toFixed(1) + "%"; }
 // ==========================================
 
 const state = {
-  mode: null,           // "profit" | "price" | "compare"
+  mode: null,           // "profit" | "price" | "compare_price" | "compare_profit" | "compare_best"
   appKey: null,
   commissionRate: null,
   shippingGroup: null,
@@ -90,14 +90,26 @@ const state = {
 let currentStep = 0;
 let stepHistory = [];
 
+function isCompareMode() {
+  return state.mode === "compare_price" || state.mode === "compare_profit" || state.mode === "compare_best";
+}
+
 function getSteps() {
-  if (state.mode === "compare") {
+  if (state.mode === "compare_price") {
+    // 同じ売値で各アプリの利益を比較
+    return ["mode", "sizeCategory", "rakumaCommission", "comparePrice", "compareCost", "result"];
+  }
+  if (state.mode === "compare_profit") {
+    // 同じ利益を得るための売値を各アプリで比較
+    return ["mode", "sizeCategory", "rakumaCommission", "compareTargetProfit", "compareCost", "result"];
+  }
+  if (state.mode === "compare_best") {
+    // 一番手残りが多いアプリを探す
     return ["mode", "sizeCategory", "rakumaCommission", "comparePrice", "compareCost", "result"];
   }
   const steps = ["mode", "app"];
   if (state.appKey === "rakuma") steps.push("commission");
   steps.push("shipping");
-  // 専用資材確認は配送方法選択後に動的判定
   if (state.shippingMethod && state.shippingMethod.material > 0) steps.push("material");
   steps.push("transfer");
   if (state.mode === "profit") steps.push("price");
@@ -152,6 +164,7 @@ function renderStep() {
     case "sizeCategory": renderSizeCategoryStep(area); break;
     case "rakumaCommission": renderRakumaCommissionStep(area); break;
     case "comparePrice": renderComparePriceStep(area); break;
+    case "compareTargetProfit": renderCompareTargetProfitStep(area); break;
     case "compareCost": renderCompareCostStep(area); break;
     case "result": renderResult(area, resultArea); break;
   }
@@ -205,9 +218,11 @@ function updateSummary() {
 
   if (state.mode === "profit") tags.push("売値→利益");
   else if (state.mode === "price") tags.push("利益→売値");
-  else if (state.mode === "compare") tags.push("横断比較");
+  else if (state.mode === "compare_price") tags.push("横断比較：利益");
+  else if (state.mode === "compare_profit") tags.push("横断比較：売値");
+  else if (state.mode === "compare_best") tags.push("最もお得なアプリ");
 
-  if (state.mode === "compare") {
+  if (isCompareMode()) {
     if (state.sizeCategory) {
       const cat = SIZE_CATEGORIES.find(c => c.key === state.sizeCategory);
       if (cat) tags.push(cat.label);
@@ -227,14 +242,37 @@ function updateSummary() {
 // ==========================================
 
 function renderModeStep(area) {
-  area.appendChild(createEl("div", "step-question", "何を計算しますか？"));
+  area.appendChild(createEl("div", "step-question", "あなたが知りたいことは？"));
+  area.appendChild(createEl("div", "step-sub", "一番近いものを選んでください"));
 
   const list = createEl("div", "choice-list");
 
   const modes = [
-    { key: "profit", main: "売値から利益を計算", detail: "売値を入力 → 利益がわかる" },
-    { key: "price", main: "目標利益から売値を逆算", detail: "欲しい利益を入力 → 必要な売値がわかる" },
-    { key: "compare", main: "3アプリを横断比較", detail: "同じ条件で各アプリの利益を比較" },
+    {
+      key: "profit",
+      main: "この値段で売ったら、手元にいくら残る？",
+      detail: "売値と原価を入れるだけで、手数料・送料を引いた利益がわかります"
+    },
+    {
+      key: "price",
+      main: "〇〇円の利益が欲しい。いくらで売ればいい？",
+      detail: "欲しい利益を入れると、必要な売値を自動で計算します"
+    },
+    {
+      key: "compare_price",
+      main: "同じ値段で出品したら、どのアプリが一番お得？",
+      detail: "メルカリ・ラクマ・Yahoo!フリマで手元に残る金額を比較します"
+    },
+    {
+      key: "compare_profit",
+      main: "〇〇円の利益を出すには、どのアプリが一番安く売れる？",
+      detail: "同じ利益を得るために必要な売値を、各アプリで比較します"
+    },
+    {
+      key: "compare_best",
+      main: "とにかく一番手残りが多いアプリを教えて！",
+      detail: "売値と原価を入れるだけで、最もお得なアプリと配送方法がわかります"
+    },
   ];
 
   modes.forEach(m => {
@@ -249,7 +287,7 @@ function renderModeStep(area) {
 }
 
 function renderAppStep(area) {
-  area.appendChild(createEl("div", "step-question", "どのフリマアプリですか？"));
+  area.appendChild(createEl("div", "step-question", "どのフリマアプリに出品しますか？"));
 
   const list = createEl("div", "choice-list");
   for (const [key, data] of Object.entries(FRIMA_DATA)) {
@@ -282,7 +320,8 @@ function renderCommissionStep(area) {
 
 function renderShippingStep(area) {
   const appData = FRIMA_DATA[state.appKey];
-  area.appendChild(createEl("div", "step-question", "配送方法は？"));
+  area.appendChild(createEl("div", "step-question", "どの方法で発送しますか？"));
+  area.appendChild(createEl("div", "step-sub", "送料と資材費込みの金額を表示しています"));
 
   const list = createEl("div", "choice-list");
   appData.shippingGroups.forEach(group => {
@@ -331,7 +370,7 @@ function renderMaterialStep(area) {
 
 function renderTransferStep(area) {
   const appData = FRIMA_DATA[state.appKey];
-  area.appendChild(createEl("div", "step-question", "振込先は？"));
+  area.appendChild(createEl("div", "step-question", "売上金はどこに振り込みますか？"));
 
   const list = createEl("div", "choice-list");
   appData.transferFeeOptions.forEach(opt => {
@@ -408,7 +447,8 @@ function renderCostStep(area) {
 // ==========================================
 
 function renderSizeCategoryStep(area) {
-  area.appendChild(createEl("div", "step-question", "商品の配送サイズは？"));
+  area.appendChild(createEl("div", "step-question", "送る商品の大きさは？"));
+  area.appendChild(createEl("div", "step-sub", "だいたいの大きさでOKです"));
 
   const list = createEl("div", "choice-list");
   SIZE_CATEGORIES.forEach(cat => {
@@ -422,8 +462,8 @@ function renderSizeCategoryStep(area) {
 }
 
 function renderRakumaCommissionStep(area) {
-  area.appendChild(createEl("div", "step-question", "ラクマの手数料率は？"));
-  area.appendChild(createEl("div", "step-sub", "横断比較でのラクマ手数料。わからない場合は10%。"));
+  area.appendChild(createEl("div", "step-question", "ラクマの手数料率を教えてください"));
+  area.appendChild(createEl("div", "step-sub", "ラクマは販売実績で手数料が変わります。わからない場合は「10%」を選んでください"));
 
   const list = createEl("div", "choice-list");
   FRIMA_DATA.rakuma.commissionOptions.forEach(opt => {
@@ -436,8 +476,18 @@ function renderRakumaCommissionStep(area) {
 }
 
 function renderComparePriceStep(area) {
-  renderNumberInput(area, "売値（税込）はいくらですか？", "2000", (val) => {
+  const q = state.mode === "compare_best"
+    ? "いくらで出品する予定ですか？"
+    : "各アプリで同じ売値にするとしたら、いくらですか？";
+  renderNumberInput(area, q, "2000", (val) => {
     state.price = val;
+    advance();
+  });
+}
+
+function renderCompareTargetProfitStep(area) {
+  renderNumberInput(area, "いくらの利益が欲しいですか？", "1000", (val) => {
+    state.targetProfit = val;
     advance();
   });
 }
@@ -457,8 +507,10 @@ function renderResult(area, resultArea) {
   area.replaceChildren();
   resultArea.style.display = "block";
 
-  if (state.mode === "compare") {
+  if (state.mode === "compare_price" || state.mode === "compare_best") {
     renderCompareResult(resultArea);
+  } else if (state.mode === "compare_profit") {
+    renderCompareProfitResult(resultArea);
   } else {
     renderSingleResult(resultArea);
   }
@@ -577,6 +629,70 @@ function renderCompareResult(resultArea) {
     details.appendChild(createEl("span", "", "\u9001\u6599: " + formatYen(r.shippingCost)));
     if (r.materialCost > 0) details.appendChild(createEl("span", "", "\u8CC7\u6750: " + formatYen(r.materialCost)));
     if (r.transferFee > 0) details.appendChild(createEl("span", "", "\u632F\u8FBC: " + formatYen(r.transferFee)));
+    card.appendChild(details);
+
+    resultArea.appendChild(card);
+  });
+}
+
+function renderCompareProfitResult(resultArea) {
+  // 各アプリで目標利益を得るための必要売値を計算
+  const results = [];
+  for (const [appKey, appData] of Object.entries(FRIMA_DATA)) {
+    const candidates = [];
+    for (const group of appData.shippingGroups) {
+      for (const method of group.methods) {
+        if (method.sizeCategory === state.sizeCategory) candidates.push({ ...method, groupName: group.groupName });
+      }
+    }
+    if (candidates.length === 0) { results.push({ appKey, appName: appData.name, available: false }); continue; }
+    candidates.sort((a, b) => (a.cost + a.material) - (b.cost + b.material));
+    const best = candidates[0];
+    const commissionRate = appKey === "rakuma" ? state.rakumaCommissionRate : appData.commissionRate;
+    const transferFee = Math.min(...appData.transferFeeOptions.map(o => o.value));
+    const result = calcRequiredPrice({
+      targetProfit: state.targetProfit, cost: state.cost, commissionRate,
+      shippingCost: best.cost, materialCost: best.material, transferFee,
+    });
+    results.push({
+      appKey, appName: appData.name, available: true,
+      shippingName: best.name, shippingGroupName: best.groupName,
+      commissionRate, ...result,
+    });
+  }
+  // 必要売値が安い順にソート
+  results.sort((a, b) => { if (!a.available) return 1; if (!b.available) return -1; return a.price - b.price; });
+
+  const rankLabels = ["1\u4F4D", "2\u4F4D", "3\u4F4D"];
+
+  results.forEach((r, i) => {
+    const card = createEl("div", "compare-card");
+    if (!r.available) {
+      const header = createEl("div", "compare-card-header");
+      header.appendChild(createEl("span", "compare-app-name", r.appName));
+      card.appendChild(header);
+      card.appendChild(createEl("p", "compare-no-shipping", "\u3053\u306E\u30B5\u30A4\u30BA\u306E\u914D\u9001\u65B9\u6CD5\u306A\u3057"));
+      resultArea.appendChild(card);
+      return;
+    }
+    if (i === 0) card.classList.add("best");
+    const header = createEl("div", "compare-card-header");
+    header.appendChild(createEl("span", "compare-app-name", r.appName));
+    header.appendChild(createEl("span", "compare-rank", rankLabels[i] || ""));
+    card.appendChild(header);
+    card.appendChild(createEl("div", "compare-shipping-name", r.shippingGroupName + " \u2014 " + r.shippingName));
+
+    const priceLabel = createEl("div", "compare-profit");
+    priceLabel.textContent = formatYen(r.price) + "\u3067\u58F2\u308C\u3070OK";
+    card.appendChild(priceLabel);
+
+    const commLabel = r.appKey === "rakuma"
+      ? "\u624B\u6570\u6599" + (r.commissionRate * 100).toFixed(1) + "%"
+      : "\u624B\u6570\u6599" + (r.commissionRate * 100).toFixed(0) + "%";
+    const details = createEl("div", "compare-details");
+    details.appendChild(createEl("span", "", commLabel + ": " + formatYen(r.commission)));
+    details.appendChild(createEl("span", "", "\u9001\u6599: " + formatYen(r.shippingCost)));
+    details.appendChild(createEl("span", "", "\u5229\u76CA: " + formatYen(r.profit)));
     card.appendChild(details);
 
     resultArea.appendChild(card);
