@@ -342,8 +342,8 @@ function renderCommissionStep(area) {
 
 function renderShippingStep(area) {
   const appData = FRIMA_DATA[state.appKey];
-  area.appendChild(createEl("div", "step-question", "どの方法で発送しますか？"));
-  area.appendChild(createEl("div", "step-sub", "送料と資材費込みの金額を表示しています"));
+  area.appendChild(createEl("div", "step-question", "\u3069\u306E\u65B9\u6CD5\u3067\u767A\u9001\u3057\u307E\u3059\u304B\uFF1F"));
+  area.appendChild(createEl("div", "step-sub", "\u9001\u6599\u306F\u5168\u56FD\u4E00\u5F8B\u3067\u3059\u3002\u5C02\u7528\u306E\u7BB1\u3084\u5C01\u7B52\u304C\u5FC5\u8981\u306A\u3082\u306E\u306B\u306F\u5370\u304C\u3064\u3044\u3066\u3044\u307E\u3059\u3002"));
 
   const list = createEl("div", "choice-list");
   appData.shippingGroups.forEach(group => {
@@ -354,8 +354,26 @@ function renderShippingStep(area) {
     group.methods.forEach((method, idx) => {
       const totalShip = method.cost + method.material;
       const btn = createEl("button", "choice-btn");
-      btn.appendChild(createEl("div", "choice-main", method.name + "\u3000" + totalShip.toLocaleString() + "\u5186"));
-      btn.appendChild(createEl("div", "choice-detail", method.sizeNote));
+
+      // メイン行：名前と金額
+      const mainLine = createEl("div", "choice-main");
+      mainLine.textContent = method.name + "\u3000" + totalShip.toLocaleString() + "\u5186";
+
+      // 専用資材バッジ
+      if (method.material > 0) {
+        const badge = createEl("span", "material-badge", "\u5C02\u7528\u8CC7\u6750\u304C\u5FC5\u8981");
+        mainLine.appendChild(badge);
+      }
+      btn.appendChild(mainLine);
+
+      // 詳細行
+      const detailText = method.sizeNote;
+      if (method.material > 0) {
+        btn.appendChild(createEl("div", "choice-detail", detailText + "\uFF5C\u8CC7\u6750\u4EE3 " + method.material + "\u5186\u304C\u5225\u9014\u304B\u304B\u308A\u307E\u3059"));
+      } else {
+        btn.appendChild(createEl("div", "choice-detail", detailText));
+      }
+
       btn.addEventListener("click", () => {
         state.shippingGroup = group.groupName;
         state.shippingIndex = idx;
@@ -371,19 +389,48 @@ function renderShippingStep(area) {
 
 function renderMaterialStep(area) {
   const method = state.shippingMethod;
-  area.appendChild(createEl("div", "step-question", "専用資材費（" + method.material + "円）を含めますか？"));
+
+  // アラートカード
+  const alert = createEl("div", "alert-card alert-warning");
+  alert.appendChild(createEl("div", "alert-icon", "\u26A0\uFE0F"));
+  alert.appendChild(createEl("div", "alert-title", "\u5C02\u7528\u306E\u68B1\u5305\u8CC7\u6750\u304C\u5FC5\u8981\u3067\u3059"));
+
+  const body = createEl("div", "alert-body");
+  body.appendChild(createEl("p", "", method.name + " \u3067\u767A\u9001\u3059\u308B\u306B\u306F\u3001\u5C02\u7528\u306E\u7BB1\u307E\u305F\u306F\u5C01\u7B52\uFF08" + method.material + "\u5186\uFF09\u3092\u4E8B\u524D\u306B\u8CFC\u5165\u3059\u308B\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002"));
+
+  // 購入場所
   if (method.materialNote) {
-    area.appendChild(createEl("div", "step-sub", method.materialNote));
+    body.appendChild(createEl("p", "", "\u8CFC\u5165\u3067\u304D\u308B\u5834\u6240\uFF1A"));
+    const shopList = document.createElement("ul");
+    shopList.className = "shop-list";
+    // materialNoteから購入場所を抽出（「専用BOX 70円（ヤマト営業所・セブン-イレブン・ファミリーマート・メルカリストア）」の形式）
+    const match = method.materialNote.match(/[（(](.+?)[）)]/);
+    if (match) {
+      const shops = match[1].split(/[・、,]/);
+      shops.forEach(shop => {
+        const li = document.createElement("li");
+        li.textContent = shop.trim();
+        shopList.appendChild(li);
+      });
+    }
+    body.appendChild(shopList);
   }
+  alert.appendChild(body);
+  area.appendChild(alert);
+
+  // 質問
+  area.appendChild(createEl("div", "step-question", "\u8CC7\u6750\u4EE3 " + method.material + "\u5186\u3092\u8CBB\u7528\u306B\u542B\u3081\u307E\u3059\u304B\uFF1F"));
 
   const list = createEl("div", "choice-list");
   const btnYes = createEl("button", "choice-btn");
-  btnYes.appendChild(createEl("div", "choice-main", "含める（" + method.material + "円加算）"));
+  btnYes.appendChild(createEl("div", "choice-main", "\u306F\u3044\u3001\u542B\u3081\u3066\u8A08\u7B97\u3059\u308B"));
+  btnYes.appendChild(createEl("div", "choice-detail", "\u307E\u3060\u8CC7\u6750\u3092\u6301\u3063\u3066\u3044\u306A\u3044\u306E\u3067\u3001\u8CFC\u5165\u8CBB\u7528\u3082\u542B\u3081\u305F\u3044"));
   btnYes.addEventListener("click", () => { state.includeMaterial = true; advance(); });
   list.appendChild(btnYes);
 
   const btnNo = createEl("button", "choice-btn");
-  btnNo.appendChild(createEl("div", "choice-main", "含めない（既に持っている）"));
+  btnNo.appendChild(createEl("div", "choice-main", "\u3044\u3044\u3048\u3001\u542B\u3081\u306A\u3044"));
+  btnNo.appendChild(createEl("div", "choice-detail", "\u3059\u3067\u306B\u5C02\u7528\u8CC7\u6750\u3092\u6301\u3063\u3066\u3044\u308B\u306E\u3067\u3001\u542B\u3081\u306A\u304F\u3066OK"));
   btnNo.addEventListener("click", () => { state.includeMaterial = false; advance(); });
   list.appendChild(btnNo);
 
@@ -572,27 +619,71 @@ function renderSingleResult(resultArea) {
   }
   resultArea.appendChild(mainCard);
 
-  // 内訳
+  // やることリスト（専用資材が必要な場合）
+  const method = state.shippingMethod;
+  if (method.material > 0 && state.includeMaterial) {
+    const todo = createEl("div", "todo-card");
+    todo.appendChild(createEl("div", "todo-title", "\u51FA\u54C1\u524D\u306B\u3084\u308B\u3053\u3068"));
+    const todoList = document.createElement("ul");
+    todoList.className = "todo-list";
+
+    // 専用資材の購入
+    const li1 = document.createElement("li");
+    li1.textContent = "\u5C02\u7528\u306E\u68B1\u5305\u8CC7\u6750\u3092\u8CFC\u5165\u3059\u308B\uFF08" + method.material + "\u5186\uFF09";
+    if (method.materialNote) {
+      const match = method.materialNote.match(/[（(](.+?)[）)]/);
+      if (match) {
+        const detail = createEl("div", "todo-detail", "\u8CFC\u5165\u5834\u6240\uFF1A" + match[1]);
+        li1.appendChild(detail);
+      }
+    }
+    todoList.appendChild(li1);
+
+    // 商品の梱包
+    const li2 = document.createElement("li");
+    li2.textContent = "\u5C02\u7528\u8CC7\u6750\u306B\u5546\u54C1\u3092\u68B1\u5305\u3059\u308B";
+    const detail2 = createEl("div", "todo-detail", "\u5546\u54C1\u304C\u50B7\u3064\u304B\u306A\u3044\u3088\u3046\u3001\u7DE9\u885D\u6750\uFF08\u30D7\u30C1\u30D7\u30C1\u7B49\uFF09\u3082\u5165\u308C\u307E\u3057\u3087\u3046");
+    li2.appendChild(detail2);
+    todoList.appendChild(li2);
+
+    // 発送
+    const li3 = document.createElement("li");
+    li3.textContent = "\u30B3\u30F3\u30D3\u30CB\u307E\u305F\u306F\u55B6\u696D\u6240\u304B\u3089\u767A\u9001\u3059\u308B";
+    const detail3 = createEl("div", "todo-detail", "\u9001\u6599 " + formatYen(method.cost) + " \u306F\u58F2\u4E0A\u304B\u3089\u81EA\u52D5\u3067\u5F15\u304B\u308C\u307E\u3059");
+    li3.appendChild(detail3);
+    todoList.appendChild(li3);
+
+    todo.appendChild(todoList);
+    resultArea.appendChild(todo);
+  }
+
+  // 内訳（初心者向け説明つき）
   const breakdown = createEl("div", "result-breakdown");
-  breakdown.appendChild(createEl("h3", "", "\u5185\u8A33"));
+  breakdown.appendChild(createEl("h3", "", "\u304A\u91D1\u306E\u5185\u8A33"));
   const table = document.createElement("table");
   table.className = "breakdown-table";
   const tbody = document.createElement("tbody");
 
   const rows = [
-    ["\u539F\u4FA1\uFF08\u4ED5\u5165\u308C\u5024\uFF09", formatYen(result.cost)],
-    ["\u8CA9\u58F2\u624B\u6570\u6599", formatYen(result.commission)],
-    ["\u9001\u6599", formatYen(result.shippingCost)],
+    ["\u539F\u4FA1\uFF08\u4ED5\u5165\u308C\u5024\uFF09", formatYen(result.cost), "\u5546\u54C1\u3092\u8CB7\u3063\u305F\u3068\u304D\u306E\u5024\u6BB5"],
+    ["\u8CA9\u58F2\u624B\u6570\u6599", formatYen(result.commission), "\u30D5\u30EA\u30DE\u30A2\u30D7\u30EA\u306B\u652F\u6255\u3046\u624B\u6570\u6599\uFF08\u58F2\u4E0A\u304B\u3089\u81EA\u52D5\u3067\u5F15\u304B\u308C\u307E\u3059\uFF09"],
+    ["\u9001\u6599", formatYen(result.shippingCost), "\u914D\u9001\u306B\u304B\u304B\u308B\u8CBB\u7528\uFF08\u58F2\u4E0A\u304B\u3089\u81EA\u52D5\u3067\u5F15\u304B\u308C\u307E\u3059\uFF09"],
   ];
-  if (result.materialCost > 0) rows.push(["\u5C02\u7528\u8CC7\u6750\u8CBB", formatYen(result.materialCost)]);
-  if (result.transferFee > 0) rows.push(["\u632F\u8FBC\u624B\u6570\u6599", formatYen(result.transferFee)]);
+  if (result.materialCost > 0) rows.push(["\u5C02\u7528\u8CC7\u6750\u8CBB", formatYen(result.materialCost), "\u5C02\u7528\u306E\u7BB1\u3084\u5C01\u7B52\u306E\u8CFC\u5165\u8CBB\u7528\uFF08\u81EA\u5206\u3067\u4E8B\u524D\u306B\u8CB7\u3046\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\uFF09"]);
+  if (result.transferFee > 0) rows.push(["\u632F\u8FBC\u624B\u6570\u6599", formatYen(result.transferFee), "\u58F2\u4E0A\u91D1\u3092\u9280\u884C\u53E3\u5EA7\u306B\u632F\u308A\u8FBC\u3080\u3068\u304D\u306E\u624B\u6570\u6599"]);
 
-  rows.forEach(([label, value]) => {
+  rows.forEach(([label, value, desc]) => {
     const tr = document.createElement("tr");
     const tdL = document.createElement("td"); tdL.textContent = label;
     const tdV = document.createElement("td"); tdV.className = "text-right"; tdV.textContent = value;
     tr.appendChild(tdL); tr.appendChild(tdV);
     tbody.appendChild(tr);
+
+    // 説明行
+    const trDesc = document.createElement("tr");
+    const tdDesc = document.createElement("td"); tdDesc.className = "breakdown-desc"; tdDesc.colSpan = 2; tdDesc.textContent = desc;
+    trDesc.appendChild(tdDesc);
+    tbody.appendChild(trDesc);
   });
 
   table.appendChild(tbody);
