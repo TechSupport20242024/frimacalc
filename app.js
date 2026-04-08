@@ -390,51 +390,74 @@ function renderShippingStep(area) {
 function renderMaterialStep(area) {
   const method = state.shippingMethod;
 
-  // アラートカード
-  const alert = createEl("div", "alert-card alert-warning");
-  alert.appendChild(createEl("div", "alert-icon", "\u26A0\uFE0F"));
-  alert.appendChild(createEl("div", "alert-title", "\u5C02\u7528\u306E\u68B1\u5305\u8CC7\u6750\u304C\u5FC5\u8981\u3067\u3059"));
+  // 質問（常に目立つ）
+  area.appendChild(createEl("div", "step-question", method.name + " には専用の箱（または封筒）が必要です"));
+  area.appendChild(createEl("div", "step-sub", "資材代 " + method.material + "円を費用に含めますか？"));
 
-  const body = createEl("div", "alert-body");
-  body.appendChild(createEl("p", "", method.name + " \u3067\u767A\u9001\u3059\u308B\u306B\u306F\u3001\u5C02\u7528\u306E\u7BB1\u307E\u305F\u306F\u5C01\u7B52\uFF08" + method.material + "\u5186\uFF09\u3092\u4E8B\u524D\u306B\u8CFC\u5165\u3059\u308B\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002"));
-
-  // 購入場所
+  // ヘルプカード（購入場所の詳細）
   if (method.materialNote) {
-    body.appendChild(createEl("p", "", "\u8CFC\u5165\u3067\u304D\u308B\u5834\u6240\uFF1A"));
-    const shopList = document.createElement("ul");
-    shopList.className = "shop-list";
-    // materialNoteから購入場所を抽出（「専用BOX 70円（ヤマト営業所・セブン-イレブン・ファミリーマート・メルカリストア）」の形式）
-    const match = method.materialNote.match(/[（(](.+?)[）)]/);
-    if (match) {
-      const shops = match[1].split(/[・、,]/);
-      shops.forEach(shop => {
-        const li = document.createElement("li");
-        li.textContent = shop.trim();
-        shopList.appendChild(li);
-      });
-    }
-    body.appendChild(shopList);
+    const helpCard = buildHelpCard({
+      type: "warning",
+      icon: "?",
+      title: "専用資材ってなに？どこで買えるの？",
+      hint: "ここをタップすると詳しい説明が読めます",
+      buildBody: (body) => {
+        body.appendChild(createEl("p", "", method.name + " で発送するには、専用の箱や封筒（" + method.material + "円）を事前にお店で購入する必要があります。普通のダンボールや封筒は使えません。"));
+        body.appendChild(createEl("p", "", "以下のお店で購入できます："));
+        const match = method.materialNote.match(/[（(](.+?)[）)]/);
+        if (match) {
+          const shopList = document.createElement("ul");
+          shopList.className = "shop-list";
+          match[1].split(/[・、,]/).forEach(shop => {
+            const li = document.createElement("li");
+            li.textContent = shop.trim();
+            shopList.appendChild(li);
+          });
+          body.appendChild(shopList);
+        }
+      }
+    });
+    area.appendChild(helpCard);
   }
-  alert.appendChild(body);
-  area.appendChild(alert);
-
-  // 質問
-  area.appendChild(createEl("div", "step-question", "\u8CC7\u6750\u4EE3 " + method.material + "\u5186\u3092\u8CBB\u7528\u306B\u542B\u3081\u307E\u3059\u304B\uFF1F"));
 
   const list = createEl("div", "choice-list");
   const btnYes = createEl("button", "choice-btn");
-  btnYes.appendChild(createEl("div", "choice-main", "\u306F\u3044\u3001\u542B\u3081\u3066\u8A08\u7B97\u3059\u308B"));
-  btnYes.appendChild(createEl("div", "choice-detail", "\u307E\u3060\u8CC7\u6750\u3092\u6301\u3063\u3066\u3044\u306A\u3044\u306E\u3067\u3001\u8CFC\u5165\u8CBB\u7528\u3082\u542B\u3081\u305F\u3044"));
+  btnYes.appendChild(createEl("div", "choice-main", "はい、含めて計算する"));
+  btnYes.appendChild(createEl("div", "choice-detail", "まだ資材を持っていないので、購入費用も含めたい"));
   btnYes.addEventListener("click", () => { state.includeMaterial = true; advance(); });
   list.appendChild(btnYes);
 
   const btnNo = createEl("button", "choice-btn");
-  btnNo.appendChild(createEl("div", "choice-main", "\u3044\u3044\u3048\u3001\u542B\u3081\u306A\u3044"));
-  btnNo.appendChild(createEl("div", "choice-detail", "\u3059\u3067\u306B\u5C02\u7528\u8CC7\u6750\u3092\u6301\u3063\u3066\u3044\u308B\u306E\u3067\u3001\u542B\u3081\u306A\u304F\u3066OK"));
+  btnNo.appendChild(createEl("div", "choice-main", "いいえ、含めない"));
+  btnNo.appendChild(createEl("div", "choice-detail", "すでに専用資材を持っているので、含めなくてOK"));
   btnNo.addEventListener("click", () => { state.includeMaterial = false; advance(); });
   list.appendChild(btnNo);
 
   area.appendChild(list);
+}
+
+// ヘルプカード生成ユーティリティ
+function buildHelpCard({ type, icon, title, hint, buildBody }) {
+  const card = createEl("div", "help-card" + (type ? " " + type : ""));
+
+  const header = createEl("div", "help-card-header");
+  const iconEl = createEl("div", "help-card-icon", icon);
+  const textEl = createEl("div", "help-card-text");
+  textEl.appendChild(createEl("div", "help-card-title", title));
+  textEl.appendChild(createEl("div", "help-card-hint", hint));
+  const arrow = createEl("div", "help-card-arrow", "\u25BC");
+
+  header.appendChild(iconEl);
+  header.appendChild(textEl);
+  header.appendChild(arrow);
+  card.appendChild(header);
+
+  const body = createEl("div", "help-card-body");
+  buildBody(body);
+  card.appendChild(body);
+
+  header.addEventListener("click", () => { card.classList.toggle("open"); });
+  return card;
 }
 
 function renderTransferStep(area) {
@@ -619,84 +642,105 @@ function renderSingleResult(resultArea) {
   }
   resultArea.appendChild(mainCard);
 
-  // やることリスト（専用資材が必要な場合）
+  // やることリスト（専用資材が必要な場合・展開式）
   const method = state.shippingMethod;
   if (method.material > 0 && state.includeMaterial) {
     const todo = createEl("div", "todo-card");
-    todo.appendChild(createEl("div", "todo-title", "\u51FA\u54C1\u524D\u306B\u3084\u308B\u3053\u3068"));
+
+    // ヘッダー（常に見える）
+    const todoHeader = createEl("div", "todo-header");
+    todoHeader.appendChild(createEl("div", "todo-badge", "3"));
+    const todoText = createEl("div", "todo-header-text");
+    todoText.appendChild(createEl("div", "todo-header-title", "出品前にやること（3つ）"));
+    todoText.appendChild(createEl("div", "todo-header-hint", "タップすると手順を確認できます"));
+    todoHeader.appendChild(todoText);
+    todoHeader.appendChild(createEl("div", "todo-header-arrow", "\u25BC"));
+    todo.appendChild(todoHeader);
+
+    // ボディ（タップで展開）
+    const todoBody = createEl("div", "todo-body");
     const todoList = document.createElement("ul");
     todoList.className = "todo-list";
 
-    // 専用資材の購入
     const li1 = document.createElement("li");
-    li1.textContent = "\u5C02\u7528\u306E\u68B1\u5305\u8CC7\u6750\u3092\u8CFC\u5165\u3059\u308B\uFF08" + method.material + "\u5186\uFF09";
+    li1.textContent = "専用の梱包資材を購入する（" + method.material + "円）";
     if (method.materialNote) {
       const match = method.materialNote.match(/[（(](.+?)[）)]/);
-      if (match) {
-        const detail = createEl("div", "todo-detail", "\u8CFC\u5165\u5834\u6240\uFF1A" + match[1]);
-        li1.appendChild(detail);
-      }
+      if (match) li1.appendChild(createEl("div", "todo-detail", "購入場所：" + match[1]));
     }
     todoList.appendChild(li1);
 
-    // 商品の梱包
     const li2 = document.createElement("li");
-    li2.textContent = "\u5C02\u7528\u8CC7\u6750\u306B\u5546\u54C1\u3092\u68B1\u5305\u3059\u308B";
-    const detail2 = createEl("div", "todo-detail", "\u5546\u54C1\u304C\u50B7\u3064\u304B\u306A\u3044\u3088\u3046\u3001\u7DE9\u885D\u6750\uFF08\u30D7\u30C1\u30D7\u30C1\u7B49\uFF09\u3082\u5165\u308C\u307E\u3057\u3087\u3046");
-    li2.appendChild(detail2);
+    li2.textContent = "専用資材に商品を梱包する";
+    li2.appendChild(createEl("div", "todo-detail", "商品が傷つかないよう、緩衝材（プチプチ等）も入れましょう"));
     todoList.appendChild(li2);
 
-    // 発送
     const li3 = document.createElement("li");
-    li3.textContent = "\u30B3\u30F3\u30D3\u30CB\u307E\u305F\u306F\u55B6\u696D\u6240\u304B\u3089\u767A\u9001\u3059\u308B";
-    const detail3 = createEl("div", "todo-detail", "\u9001\u6599 " + formatYen(method.cost) + " \u306F\u58F2\u4E0A\u304B\u3089\u81EA\u52D5\u3067\u5F15\u304B\u308C\u307E\u3059");
-    li3.appendChild(detail3);
+    li3.textContent = "コンビニまたは営業所から発送する";
+    li3.appendChild(createEl("div", "todo-detail", "送料 " + formatYen(method.cost) + " は売上から自動で引かれます"));
     todoList.appendChild(li3);
 
-    todo.appendChild(todoList);
+    todoBody.appendChild(todoList);
+    todo.appendChild(todoBody);
+
+    todoHeader.addEventListener("click", () => { todo.classList.toggle("open"); });
     resultArea.appendChild(todo);
   }
 
-  // 内訳（初心者向け説明つき）
+  // 内訳テーブル（シンプル版）
   const breakdown = createEl("div", "result-breakdown");
-  breakdown.appendChild(createEl("h3", "", "\u304A\u91D1\u306E\u5185\u8A33"));
+  breakdown.appendChild(createEl("h3", "", "お金の内訳"));
   const table = document.createElement("table");
   table.className = "breakdown-table";
   const tbody = document.createElement("tbody");
 
   const rows = [
-    ["\u539F\u4FA1\uFF08\u4ED5\u5165\u308C\u5024\uFF09", formatYen(result.cost), "\u5546\u54C1\u3092\u8CB7\u3063\u305F\u3068\u304D\u306E\u5024\u6BB5"],
-    ["\u8CA9\u58F2\u624B\u6570\u6599", formatYen(result.commission), "\u30D5\u30EA\u30DE\u30A2\u30D7\u30EA\u306B\u652F\u6255\u3046\u624B\u6570\u6599\uFF08\u58F2\u4E0A\u304B\u3089\u81EA\u52D5\u3067\u5F15\u304B\u308C\u307E\u3059\uFF09"],
-    ["\u9001\u6599", formatYen(result.shippingCost), "\u914D\u9001\u306B\u304B\u304B\u308B\u8CBB\u7528\uFF08\u58F2\u4E0A\u304B\u3089\u81EA\u52D5\u3067\u5F15\u304B\u308C\u307E\u3059\uFF09"],
+    { label: "原価（仕入れ値）", value: formatYen(result.cost), desc: "商品を買ったときの値段" },
+    { label: "販売手数料", value: formatYen(result.commission), desc: "フリマアプリに支払う手数料（売上から自動で引かれます）" },
+    { label: "送料", value: formatYen(result.shippingCost), desc: "配送にかかる費用（売上から自動で引かれます）" },
   ];
-  if (result.materialCost > 0) rows.push(["\u5C02\u7528\u8CC7\u6750\u8CBB", formatYen(result.materialCost), "\u5C02\u7528\u306E\u7BB1\u3084\u5C01\u7B52\u306E\u8CFC\u5165\u8CBB\u7528\uFF08\u81EA\u5206\u3067\u4E8B\u524D\u306B\u8CB7\u3046\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\uFF09"]);
-  if (result.transferFee > 0) rows.push(["\u632F\u8FBC\u624B\u6570\u6599", formatYen(result.transferFee), "\u58F2\u4E0A\u91D1\u3092\u9280\u884C\u53E3\u5EA7\u306B\u632F\u308A\u8FBC\u3080\u3068\u304D\u306E\u624B\u6570\u6599"]);
+  if (result.materialCost > 0) rows.push({ label: "専用資材費", value: formatYen(result.materialCost), desc: "専用の箱や封筒の購入費用（自分で事前に買う必要があります）" });
+  if (result.transferFee > 0) rows.push({ label: "振込手数料", value: formatYen(result.transferFee), desc: "売上金を銀行口座に振り込むときの手数料" });
 
-  rows.forEach(([label, value, desc]) => {
+  rows.forEach(row => {
     const tr = document.createElement("tr");
-    const tdL = document.createElement("td"); tdL.textContent = label;
-    const tdV = document.createElement("td"); tdV.className = "text-right"; tdV.textContent = value;
+    const tdL = document.createElement("td"); tdL.textContent = row.label;
+    const tdV = document.createElement("td"); tdV.className = "text-right"; tdV.textContent = row.value;
     tr.appendChild(tdL); tr.appendChild(tdV);
     tbody.appendChild(tr);
-
-    // 説明行
-    const trDesc = document.createElement("tr");
-    const tdDesc = document.createElement("td"); tdDesc.className = "breakdown-desc"; tdDesc.colSpan = 2; tdDesc.textContent = desc;
-    trDesc.appendChild(tdDesc);
-    tbody.appendChild(trDesc);
   });
 
   table.appendChild(tbody);
 
   const tfoot = document.createElement("tfoot");
   const trTotal = document.createElement("tr"); trTotal.className = "breakdown-total";
-  const tdTL = document.createElement("td"); tdTL.textContent = "\u7DCF\u30B3\u30B9\u30C8";
+  const tdTL = document.createElement("td"); tdTL.textContent = "総コスト";
   const tdTV = document.createElement("td"); tdTV.className = "text-right"; tdTV.textContent = formatYen(result.totalCost);
   trTotal.appendChild(tdTL); trTotal.appendChild(tdTV);
   tfoot.appendChild(trTotal);
   table.appendChild(tfoot);
 
   breakdown.appendChild(table);
+
+  // 用語ヘルプ（展開式）
+  const helpDescs = rows.map(r => ({ label: r.label, desc: r.desc }));
+  const helpCard = buildHelpCard({
+    type: "",
+    icon: "?",
+    title: "各項目の意味がわからない方へ",
+    hint: "タップすると用語の説明が読めます",
+    buildBody: (body) => {
+      helpDescs.forEach(d => {
+        const row = createEl("div", "breakdown-desc-row");
+        const strong = document.createElement("strong");
+        strong.textContent = d.label;
+        row.appendChild(strong);
+        row.appendChild(document.createTextNode("：" + d.desc));
+        body.appendChild(row);
+      });
+    }
+  });
+  breakdown.appendChild(helpCard);
   resultArea.appendChild(breakdown);
 }
 

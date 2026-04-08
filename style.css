@@ -288,50 +288,113 @@ body {
   vertical-align: middle;
 }
 
-/* アラートカード（専用資材ステップ等） */
-.alert-card {
+/* ========================================
+   ヘルプカード（展開式・初心者ガイド）
+   ======================================== */
+.help-card {
   border-radius: var(--radius);
-  padding: 20px;
   margin-bottom: 16px;
-}
-
-.alert-card.alert-warning {
-  background: #fffbeb;
-  border: 2px solid #fbbf24;
-}
-
-.alert-card.alert-info {
-  background: #eff6ff;
+  overflow: hidden;
   border: 2px solid #93c5fd;
+  background: #eff6ff;
 }
 
-.alert-card.alert-success {
-  background: var(--color-profit-bg);
-  border: 2px solid #86efac;
+.help-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.alert-icon {
-  font-size: 32px;
-  text-align: center;
-  margin-bottom: 8px;
+.help-card-header:active {
+  background: #dbeafe;
 }
 
-.alert-title {
-  font-size: 17px;
+.help-card-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.help-card-text {
+  flex: 1;
+}
+
+.help-card-title {
+  font-size: 14px;
   font-weight: 700;
-  text-align: center;
-  margin-bottom: 8px;
-  color: var(--color-text);
+  color: #1e40af;
+  line-height: 1.4;
 }
 
-.alert-body {
+.help-card-hint {
+  font-size: 12px;
+  color: #3b82f6;
+  margin-top: 2px;
+}
+
+.help-card-arrow {
+  font-size: 18px;
+  color: #3b82f6;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.help-card.open .help-card-arrow {
+  transform: rotate(180deg);
+}
+
+.help-card-body {
+  display: none;
+  padding: 0 16px 16px;
   font-size: 14px;
   color: var(--color-text);
   line-height: 1.8;
 }
 
-.alert-body p {
+.help-card.open .help-card-body {
+  display: block;
+}
+
+.help-card-body p {
   margin-bottom: 8px;
+}
+
+/* 警告ヘルプカード */
+.help-card.warning {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.help-card.warning .help-card-icon {
+  background: #f59e0b;
+}
+
+.help-card.warning .help-card-title {
+  color: #92400e;
+}
+
+.help-card.warning .help-card-hint {
+  color: #b45309;
+}
+
+.help-card.warning .help-card-arrow {
+  color: #b45309;
+}
+
+.help-card.warning .help-card-header:active {
+  background: #fef3c7;
 }
 
 /* 購入場所リスト */
@@ -351,20 +414,76 @@ body {
   font-weight: 600;
 }
 
-/* やることリスト（結果画面） */
+/* やることリスト（結果画面・展開式） */
 .todo-card {
   background: #fffbeb;
   border: 2px solid #fbbf24;
   border-radius: var(--radius);
-  padding: 16px;
   margin-bottom: 16px;
+  overflow: hidden;
 }
 
-.todo-title {
+.todo-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.todo-header:active {
+  background: #fef3c7;
+}
+
+.todo-badge {
+  width: 28px;
+  height: 28px;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.todo-header-text {
+  flex: 1;
+}
+
+.todo-header-title {
   font-size: 15px;
   font-weight: 700;
   color: #92400e;
-  margin-bottom: 10px;
+}
+
+.todo-header-hint {
+  font-size: 12px;
+  color: #b45309;
+  margin-top: 1px;
+}
+
+.todo-header-arrow {
+  font-size: 18px;
+  color: #b45309;
+  transition: transform 0.2s;
+}
+
+.todo-card.open .todo-header-arrow {
+  transform: rotate(180deg);
+}
+
+.todo-body {
+  display: none;
+  padding: 0 16px 16px;
+}
+
+.todo-card.open .todo-body {
+  display: block;
 }
 
 .todo-list {
@@ -409,11 +528,26 @@ body {
 }
 
 /* 内訳テーブルの説明行 */
-.breakdown-desc {
-  font-size: 11px;
+.breakdown-help {
+  display: none;
+  padding: 0 16px 12px;
+}
+
+.breakdown-help.open {
+  display: block;
+}
+
+.breakdown-desc-row {
+  font-size: 12px;
   color: var(--color-text-sub);
-  padding-top: 0 !important;
-  border-bottom: 1px solid var(--color-border) !important;
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid var(--color-border);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.breakdown-desc-row strong {
+  color: var(--color-text);
 }
 
 /* ナビボタン */
