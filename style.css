@@ -39,20 +39,43 @@ body {
 .header h1 { font-size: 24px; font-weight: 700; color: var(--color-primary); }
 .subtitle { font-size: 13px; color: var(--color-text-sub); margin-top: 2px; }
 
-/* プログレスバー */
-.progress-bar {
-  height: 4px;
-  background: var(--color-border);
-  border-radius: 2px;
+/* ステップインジケーター */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 24px;
-  overflow: hidden;
+  justify-content: center;
 }
-.progress-fill {
-  height: 100%;
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.step-dot.done {
   background: var(--color-primary);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-  width: 0%;
+}
+
+.step-dot.current {
+  background: var(--color-primary);
+  width: 28px;
+  border-radius: 5px;
+}
+
+.step-dot.upcoming {
+  background: var(--color-border);
+}
+
+.step-label {
+  font-size: 12px;
+  color: var(--color-text-sub);
+  margin-left: 8px;
+  white-space: nowrap;
 }
 
 /* ウィザードステップ */
