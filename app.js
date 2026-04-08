@@ -128,9 +128,28 @@ function getTotalSteps() {
 }
 
 function updateProgress() {
+  const container = document.getElementById("step-indicator");
+  container.replaceChildren();
+
   const total = getTotalSteps();
-  const pct = Math.min(100, Math.round((currentStep / (total - 1)) * 100));
-  document.getElementById("progress-fill").style.width = pct + "%";
+  // 結果ステップは含めずにドット表示（結果は「完了」扱い）
+  const dotCount = total - 1;
+
+  for (let i = 0; i < dotCount; i++) {
+    const dot = createEl("span", "step-dot");
+    if (i < currentStep) dot.classList.add("done");
+    else if (i === currentStep) dot.classList.add("current");
+    else dot.classList.add("upcoming");
+    container.appendChild(dot);
+  }
+
+  // 残りステップ数のラベル
+  const remaining = dotCount - currentStep;
+  if (remaining > 0 && currentStep < dotCount) {
+    container.appendChild(createEl("span", "step-label", "\u3042\u3068" + remaining + "\u30B9\u30C6\u30C3\u30D7"));
+  } else if (currentStep >= dotCount) {
+    container.appendChild(createEl("span", "step-label", "\u5B8C\u4E86\uFF01"));
+  }
 }
 
 // ==========================================
@@ -138,6 +157,9 @@ function updateProgress() {
 // ==========================================
 
 function renderStep() {
+  // 画面トップにスクロール
+  window.scrollTo(0, 0);
+
   const area = document.getElementById("wizard-area");
   const resultArea = document.getElementById("result-area");
   const navButtons = document.getElementById("nav-buttons");
