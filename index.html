@@ -18,162 +18,27 @@
       <p class="subtitle">フリマ利益計算ツール</p>
     </header>
 
-    <!-- モード切替タブ -->
-    <nav class="tabs" role="tablist">
-      <button class="tab active" role="tab" data-mode="profit" aria-selected="true">売値→利益</button>
-      <button class="tab" role="tab" data-mode="price" aria-selected="false">利益→売値</button>
-      <button class="tab" role="tab" data-mode="compare" aria-selected="false">横断比較</button>
-    </nav>
+    <!-- プログレスバー -->
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
 
-    <!-- モード1: 売値→利益 / モード2: 利益→売値（共通フォーム） -->
-    <section id="mode-single" class="mode-panel active">
-      <form id="form-single" autocomplete="off">
-        <!-- フリマアプリ選択 -->
-        <div class="form-group">
-          <label for="app-select">フリマアプリ</label>
-          <select id="app-select">
-            <option value="">選択してください</option>
-          </select>
-        </div>
+    <!-- ウィザードエリア -->
+    <div id="wizard-area">
+      <!-- 各ステップはapp.jsで動的生成 -->
+    </div>
 
-        <!-- 手数料率（ラクマのみ表示） -->
-        <div class="form-group" id="commission-group" style="display:none;">
-          <label for="commission-select">手数料率</label>
-          <select id="commission-select"></select>
-        </div>
+    <!-- 選択済み内容の表示 -->
+    <div id="summary-bar" class="summary-bar" style="display:none;"></div>
 
-        <!-- 配送方法 -->
-        <div class="form-group">
-          <label for="shipping-select">配送方法</label>
-          <select id="shipping-select">
-            <option value="">先にアプリを選択</option>
-          </select>
-        </div>
+    <!-- 結果エリア -->
+    <div id="result-area" style="display:none;"></div>
 
-        <!-- サイズ情報 -->
-        <div class="info-box" id="size-info" style="display:none;">
-          <span id="size-info-text"></span>
-        </div>
-
-        <!-- 専用資材情報 -->
-        <div class="info-box material-info" id="material-info" style="display:none;">
-          <label class="checkbox-label">
-            <input type="checkbox" id="include-material" checked>
-            <span>専用資材費を含める（<span id="material-cost-label">0</span>円）</span>
-          </label>
-          <p class="material-note" id="material-note"></p>
-        </div>
-
-        <!-- 振込手数料 -->
-        <div class="form-group" id="transfer-group" style="display:none;">
-          <label for="transfer-select">振込先</label>
-          <select id="transfer-select"></select>
-        </div>
-
-        <div class="checkbox-row">
-          <label class="checkbox-label">
-            <input type="checkbox" id="include-transfer" checked>
-            <span>振込手数料を含める</span>
-          </label>
-        </div>
-
-        <!-- 売値入力（モード1） -->
-        <div class="form-group" id="price-group">
-          <label for="input-price">売値（税込）</label>
-          <div class="input-with-unit">
-            <input type="number" id="input-price" inputmode="numeric" min="0" step="1" placeholder="0">
-            <span class="unit">円</span>
-          </div>
-        </div>
-
-        <!-- 目標利益入力（モード2） -->
-        <div class="form-group" id="target-profit-group" style="display:none;">
-          <label for="input-target-profit">目標利益</label>
-          <div class="input-with-unit">
-            <input type="number" id="input-target-profit" inputmode="numeric" min="0" step="1" placeholder="0">
-            <span class="unit">円</span>
-          </div>
-        </div>
-
-        <!-- 原価入力 -->
-        <div class="form-group">
-          <label for="input-cost">原価（仕入れ値）</label>
-          <div class="input-with-unit">
-            <input type="number" id="input-cost" inputmode="numeric" min="0" step="1" placeholder="0">
-            <span class="unit">円</span>
-          </div>
-        </div>
-      </form>
-
-      <!-- 結果表示 -->
-      <div id="result-single" class="result-area" style="display:none;">
-        <div class="result-main" id="result-main-card">
-          <div class="result-label" id="result-main-label">利益</div>
-          <div class="result-value" id="result-main-value">0円</div>
-          <div class="result-sub" id="result-sub-value"></div>
-        </div>
-        <div class="result-breakdown">
-          <h3>内訳</h3>
-          <table class="breakdown-table">
-            <tbody id="breakdown-body"></tbody>
-            <tfoot>
-              <tr class="breakdown-total">
-                <td>総コスト</td>
-                <td id="result-total-cost" class="text-right">0円</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- モード3: 横断比較 -->
-    <section id="mode-compare" class="mode-panel">
-      <form id="form-compare" autocomplete="off">
-        <!-- サイズカテゴリ選択 -->
-        <div class="form-group">
-          <label for="compare-size">配送サイズ</label>
-          <select id="compare-size"></select>
-        </div>
-
-        <!-- ラクマ手数料率 -->
-        <div class="form-group">
-          <label for="compare-rakuma-commission">ラクマ手数料率</label>
-          <select id="compare-rakuma-commission"></select>
-        </div>
-
-        <!-- 振込手数料含めるか -->
-        <div class="checkbox-row">
-          <label class="checkbox-label">
-            <input type="checkbox" id="compare-include-transfer" checked>
-            <span>振込手数料を含める（各アプリ最安の振込先で計算）</span>
-          </label>
-        </div>
-
-        <!-- 売値入力 -->
-        <div class="form-group">
-          <label for="compare-price">売値（税込）</label>
-          <div class="input-with-unit">
-            <input type="number" id="compare-price" inputmode="numeric" min="0" step="1" placeholder="0">
-            <span class="unit">円</span>
-          </div>
-        </div>
-
-        <!-- 原価入力 -->
-        <div class="form-group">
-          <label for="compare-cost">原価（仕入れ値）</label>
-          <div class="input-with-unit">
-            <input type="number" id="compare-cost" inputmode="numeric" min="0" step="1" placeholder="0">
-            <span class="unit">円</span>
-          </div>
-        </div>
-      </form>
-
-      <!-- 横断比較結果 -->
-      <div id="result-compare" class="result-area" style="display:none;">
-        <div id="compare-cards"></div>
-      </div>
-    </section>
+    <!-- ナビゲーションボタン -->
+    <div class="nav-buttons" id="nav-buttons" style="display:none;">
+      <button class="btn btn-back" id="btn-back">戻る</button>
+      <button class="btn btn-restart" id="btn-restart">最初からやり直す</button>
+    </div>
 
     <footer class="footer">
       <div class="disclaimer">
