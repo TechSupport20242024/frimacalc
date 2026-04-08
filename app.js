@@ -653,7 +653,6 @@ function renderSingleResult(resultArea) {
   resultArea.appendChild(mainCard);
 
   // やることリスト（専用資材が必要な場合・展開式）
-  const method = state.shippingMethod;
   if (method.material > 0 && state.includeMaterial) {
     const todo = createEl("div", "todo-card");
 
