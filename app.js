@@ -173,6 +173,10 @@ function renderStep() {
 
   navButtons.style.display = currentStep > 0 ? "flex" : "none";
 
+  // 常時リセットリンク（ステップ1以降で表示）
+  const resetLink = document.getElementById("reset-link");
+  resetLink.style.display = currentStep > 0 ? "block" : "none";
+
   switch (stepName) {
     case "mode": renderModeStep(area); break;
     case "app": renderAppStep(area); break;
@@ -606,6 +610,12 @@ function renderResult(area, resultArea) {
   } else {
     renderSingleResult(resultArea);
   }
+
+  // 結果画面の末尾に「もう一度計算する」ボタン
+  const restartBtn = createEl("button", "btn-submit", "もう一度計算する");
+  restartBtn.style.marginTop = "16px";
+  restartBtn.addEventListener("click", restart);
+  resultArea.appendChild(restartBtn);
 }
 
 function renderSingleResult(resultArea) {
@@ -863,5 +873,6 @@ function renderCompareProfitResult(resultArea) {
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-back").addEventListener("click", goBack);
   document.getElementById("btn-restart").addEventListener("click", restart);
+  document.getElementById("btn-reset-always").addEventListener("click", restart);
   renderStep();
 });
