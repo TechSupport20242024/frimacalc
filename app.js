@@ -5,23 +5,58 @@
 // ==========================================
 
 function calcProfit({ price, cost, commissionRate, shippingCost, materialCost, transferFee }) {
-  const commission = Math.floor(price * commissionRate);
-  const totalDeduction = commission + shippingCost + materialCost + transferFee;
-  const totalCost = cost + totalDeduction;
-  const profit = price - totalCost;
-  const profitRate = price > 0 ? (profit / price) * 100 : 0;
-  return { price, commission, shippingCost, materialCost, transferFee, cost, totalCost, profit, profitRate };
+  const safePrice = normalizeMoney(price);
+  const safeCost = normalizeMoney(cost);
+  const safeShippingCost = normalizeMoney(shippingCost);
+  const safeMaterialCost = normalizeMoney(materialCost);
+  const safeTransferFee = normalizeMoney(transferFee);
+  const safeCommissionRate = normalizeCommissionRate(commissionRate);
+  const commission = Math.floor(safePrice * safeCommissionRate);
+  const totalDeduction = commission + safeShippingCost + safeMaterialCost + safeTransferFee;
+  const totalCost = safeCost + totalDeduction;
+  const profit = safePrice - totalCost;
+  const profitRate = safePrice > 0 ? (profit / safePrice) * 100 : 0;
+  return { price: safePrice, commission, shippingCost: safeShippingCost, materialCost: safeMaterialCost, transferFee: safeTransferFee, cost: safeCost, totalCost, profit, profitRate };
 }
 
 function calcRequiredPrice({ targetProfit, cost, commissionRate, shippingCost, materialCost, transferFee }) {
-  const needed = targetProfit + cost + shippingCost + materialCost + transferFee;
-  let price = Math.ceil(needed / (1 - commissionRate));
-  let result = calcProfit({ price, cost, commissionRate, shippingCost, materialCost, transferFee });
-  if (result.profit < targetProfit) {
+  const safeTargetProfit = normalizeMoney(targetProfit);
+  const safeCost = normalizeMoney(cost);
+  const safeShippingCost = normalizeMoney(shippingCost);
+  const safeMaterialCost = normalizeMoney(materialCost);
+  const safeTransferFee = normalizeMoney(transferFee);
+  const safeCommissionRate = normalizeCommissionRate(commissionRate);
+  const needed = safeTargetProfit + safeCost + safeShippingCost + safeMaterialCost + safeTransferFee;
+  let price = Math.ceil(needed / (1 - safeCommissionRate));
+  let result = calcProfit({ price, cost: safeCost, commissionRate: safeCommissionRate, shippingCost: safeShippingCost, materialCost: safeMaterialCost, transferFee: safeTransferFee });
+  if (result.profit < safeTargetProfit) {
     price += 1;
-    result = calcProfit({ price, cost, commissionRate, shippingCost, materialCost, transferFee });
+    result = calcProfit({ price, cost: safeCost, commissionRate: safeCommissionRate, shippingCost: safeShippingCost, materialCost: safeMaterialCost, transferFee: safeTransferFee });
   }
   return result;
+}
+
+function normalizeMoney(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
+function normalizeCommissionRate(value) {
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : 0;
+}
+
+function getMinimumTransferFee(options) {
+  if (!Array.isArray(options) || options.length === 0) return 0;
+  const values = options.map(o => normalizeMoney(o.value));
+  return values.length > 0 ? Math.min(...values) : 0;
+}
+
+function compareAvailableFirst(a, b, compareAvailable) {
+  if (!a.available && !b.available) return 0;
+  if (!a.available) return 1;
+  if (!b.available) return -1;
+  return compareAvailable(a, b);
 }
 
 function calcComparison({ sizeCategory, price, cost, includeTransfer, rakumaCommissionRate }) {
@@ -38,11 +73,11 @@ function calcComparison({ sizeCategory, price, cost, includeTransfer, rakumaComm
     const best = candidates[0];
     const commissionRate = appKey === "rakuma" ? rakumaCommissionRate : appData.commissionRate;
     let transferFee = 0;
-    if (includeTransfer) { transferFee = Math.min(...appData.transferFeeOptions.map(o => o.value)); }
+    if (includeTransfer) { transferFee = getMinimumTransferFee(appData.transferFeeOptions); }
     const result = calcProfit({ price, cost, commissionRate, shippingCost: best.cost, materialCost: best.material, transferFee });
     results.push({ appKey, appName: appData.name, available: true, shippingName: best.name, shippingGroupName: best.groupName, materialCost: best.material, commissionRate, transferFee, ...result });
   }
-  results.sort((a, b) => { if (!a.available) return 1; if (!b.available) return -1; return b.profit - a.profit; });
+  results.sort((a, b) => compareAvailableFirst(a, b, (availableA, availableB) => availableB.profit - availableA.profit));
   return results;
 }
 
@@ -503,11 +538,16 @@ function renderNumberInput(area, question, placeholder, onSubmit) {
 
   const btn = createEl("button", "btn-submit", "\u6B21\u3078");
   btn.disabled = true;
+  const getValidValue = () => {
+    const value = input.valueAsNumber;
+    return Number.isFinite(value) && value >= 0 && Number.isInteger(value) ? value : null;
+  };
   input.addEventListener("input", () => {
-    btn.disabled = !input.value || parseInt(input.value) < 0;
+    btn.disabled = getValidValue() === null;
   });
   btn.addEventListener("click", () => {
-    const val = parseInt(input.value) || 0;
+    const val = getValidValue();
+    if (val === null) return;
     onSubmit(val);
   });
   inputDiv.appendChild(btn);
@@ -815,7 +855,7 @@ function renderCompareProfitResult(resultArea) {
     candidates.sort((a, b) => (a.cost + a.material) - (b.cost + b.material));
     const best = candidates[0];
     const commissionRate = appKey === "rakuma" ? state.rakumaCommissionRate : appData.commissionRate;
-    const transferFee = Math.min(...appData.transferFeeOptions.map(o => o.value));
+    const transferFee = getMinimumTransferFee(appData.transferFeeOptions);
     const result = calcRequiredPrice({
       targetProfit: state.targetProfit, cost: state.cost, commissionRate,
       shippingCost: best.cost, materialCost: best.material, transferFee,
@@ -827,7 +867,7 @@ function renderCompareProfitResult(resultArea) {
     });
   }
   // 必要売値が安い順にソート
-  results.sort((a, b) => { if (!a.available) return 1; if (!b.available) return -1; return a.price - b.price; });
+  results.sort((a, b) => compareAvailableFirst(a, b, (availableA, availableB) => availableA.price - availableB.price));
 
   const rankLabels = ["1\u4F4D", "2\u4F4D", "3\u4F4D"];
 
